@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мафия 🃏</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #0e0e0e; color: white; text-align: center; padding: 20px; margin: 0; }
+        h1 { margin-bottom: 10px; }
+        .card { background: #1e1e1e; padding: 20px; margin: 20px auto; border-radius: 15px; max-width: 90%; }
+        button { padding: 15px 25px; margin: 10px; font-size: 18px; border: none; border-radius: 12px; background: #ff4444; color: white; cursor: pointer; }
+        button:active { opacity: 0.8; }
+        .shop { background: #222; padding: 20px; border-radius: 15px; margin: 15px auto; max-width: 90%; }
+        .boost { font-size: 14px; color: #aaa; }
+    </style>
+</head>
+<body>
+    <h1>🃏 Мафия</h1>
+    <div id="role" class="card">Нажми "Начать игру", чтобы узнать роль</div>
+    <button onclick="startGame()">Начать игру</button>
+    <div id="boosts" class="boost">Твои бусты: загрузка...</div>
+
+    <h2>⭐ Магазин бустов</h2>
+    <div class="shop">
+        <p><strong>+20% шанс стать Мафией</strong></p>
+        <button onclick="buy('mafia', 20, 100, '+20% шанс на Мафию')">Купить за 100 ⭐</button>
+    </div>
+    <div class="shop">
+        <p><strong>+2 доп. действия</strong></p>
+        <button onclick="buy('actions', 2, 150, '+2 действия ночью')">Купить за 150 ⭐</button>
+    </div>
+
+    <script>
+        Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
+
+        const userId = Telegram.WebApp.initDataUnsafe.user?.id || 12345;
+
+        async function loadBoosts() {
+            const res = await fetch(`/api/user/${userId}`);
+            const data = await res.json();
+            document.getElementById('boosts').innerText =
+                `Бусты: +${data.mafia_boost}% к Мафии | +${data.extra_actions} действий`;
+        }
+
+        loadBoosts();
+
+        async function startGame() {
+            const boosts = await fetch(`/api/user/${userId}`).then(r => r.json());
+            const mafiaChance = 20 + boosts.mafia_boost;
+            const isMafia = Math.random() * 100 < mafiaChance;
+            const role = isMafia ? "Мафия 🔥🔫" : "Мирный житель 👼";
+            document.getElementById('role').innerHTML = `<h2>Твоя роль:</h2><h1>${role}</h1><p>Шанс мафии был: ${mafiaChance.toFixed(1)}%</p>`;
+        }
+
+        function buy(type, amount, price, title) {
+            const invoice = {
+                title: title,
+                description: `Покупка буста в игре Мафия`,
+                payload: { type: type, amount: amount, user_id: userId },
+                price: price
+            };
+
+            Telegram.WebApp.openInvoice(invoice, (status) => {
+                if (status === 'paid') {
+                    alert('Оплата прошла! Буст активирован 🎉');
+                    loadBoosts();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
